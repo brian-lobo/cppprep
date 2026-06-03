@@ -1,6 +1,6 @@
 #pragma once
 
-#include <vecotr>
+#include <vector>
 
 class CanJumpSolution {
 public:

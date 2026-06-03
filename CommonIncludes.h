@@ -10,3 +10,11 @@
 #include "leetcode/wordsearch.h"
 #include "leetcode/lettercombinationsofaphonenumber.h"
 #include "leetcode/generateallsubsets.h"
+#include "leetcode/openthelock.h"
+#include "leetcode/fractiontorecurringdecimal.h"
+#include "leetcode/trappingrainwater.h"
+#include "leetcode/medianoftwosortedarrays.h"
+#include "leetcode/dfs/numberofislands.h"
+
+#include "designpatterns/behavioural/strategy.h"
+#include "designpatterns/structural/decorator.h"

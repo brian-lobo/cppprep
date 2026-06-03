@@ -6,7 +6,29 @@
 
 class LongestSubArraySolution {
 public:
+
+  // better implementation
   int longestSubarray(vector<int>& nums, int limit) {
+    multiset<int> window;        // Keeps elements sorted
+    int left = 0;
+    int maxLen = 0;
+
+    for (int right = 0; right < nums.size(); ++right) {
+      window.insert(nums[right]);
+
+      // Shrink window if max - min > limit
+      while (*window.rbegin() - *window.begin() > limit) {
+        window.erase(window.find(nums[left]));
+        left++;
+      }
+
+      maxLen = max(maxLen, right - left + 1);
+    }
+
+    return maxLen;
+  }
+
+  int longestSubarray_1(vector<int>& nums, int limit) {
     int n = nums.size();
     int left = 0;
     int maxLength = 0;
@@ -52,10 +74,24 @@ class LongestSubarraySolutionTest
 {
   public:
       void run_test() {
-        std::vector<int> nums {8,2,4,7};
-        int limit{4};
+        LongestSubArraySolution sol;
+        {
+          std::vector<int> nums{8,2,4,7};
+          int limit{4};
 
-        LongestSubArraySolution ss;
-        std::cout << ss.longestSubarray(nums, limit) << std::endl;
+          sol.longestSubarray(nums, limit);
+        }
+
+        {
+          std::vector<int> nums{10,1,2,4,7,2};
+          int limit{5};
+          sol.longestSubarray(nums, limit);
+        }
+
+        {
+          std::vector<int> nums{4,2,2,2,4,4,2,2};
+          int limit{0};
+          sol.longestSubarray(nums, limit);
+        }
       }
 };
