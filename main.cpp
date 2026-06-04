@@ -8,6 +8,7 @@
 #include <set>
 
 #include "leetcode/dfs/numberofislands.h"
+#include "smartpointers/smartpointer.h"
 
 using namespace std;
 
@@ -49,18 +50,10 @@ public:
 
 int main() {
 
-  leetcode::dfs::NumberOfIslandsSolutionTest sol;
-  sol.run_test();
-
-  MaxSlidingWindowSolution s;
-
   {
-    std::vector<int> nums{1,3,-1,-3,5,3,6,7};
-    int k{3};
-
-    s.maxSlidingWindow(nums, k);
+    cppprep::smartpointers::SharedPtrTest sol;
+    sol.run_test();
   }
-
 
   return 0;
 }

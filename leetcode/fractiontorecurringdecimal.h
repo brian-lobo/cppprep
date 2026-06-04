@@ -18,7 +18,7 @@ namespace cppprep::leetcode
 
       // Make both positive
       numerator = abs(numerator);
-      denominator = abs(denominator);
+      denominator = std::abs(denominator);
 
       // Integer part
       result += std::to_string(numerator / denominator);

@@ -18,3 +18,5 @@
 
 #include "designpatterns/behavioural/strategy.h"
 #include "designpatterns/structural/decorator.h"
+
+#include "smartpointers/smartpointer.h"
