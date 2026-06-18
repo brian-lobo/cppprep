@@ -15,6 +15,7 @@
 #include "leetcode/trappingrainwater.h"
 #include "leetcode/medianoftwosortedarrays.h"
 #include "leetcode/dfs/numberofislands.h"
+#include "leetcode/lrucache.h"
 
 #include "designpatterns/behavioural/strategy.h"
 #include "designpatterns/structural/decorator.h"

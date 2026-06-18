@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 4.2)
 project(cppprep)
 
-set(CMAKE_CXX_STANDARD 26)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE INTERNAL "")
 
 
@@ -46,6 +46,17 @@ add_executable(cppprep main.cpp
         leetcode/medianoftwosortedarrays.h
         smartpointers/smartpointer.h
         leetcode/dfs/numberofislands.h
-        leetcode/slidingwindow/slidingwindow.h)
+        leetcode/slidingwindow/maxslidingwindow.h
+        leetcode/dfs/nqueens.h
+        leetcode/klargest.h
+        realworldproblems/OrderBook.cpp
+        realworldproblems/vector_impl.h
+        realworldproblems/vector_with_allocator.h
+        realworldproblems/allocator.h)
 
-target_compile_options(cppprep PRIVATE -O2)
+target_compile_options(cppprep PRIVATE -O0 -g)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    target_compile_options(cppprep PRIVATE -stdlib=libc++)
+    target_link_options(cppprep PRIVATE -stdlib=libc++)
+endif()

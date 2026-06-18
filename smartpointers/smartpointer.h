@@ -70,7 +70,7 @@ namespace cppprep::smartpointers
                 {
                     if (heapAllocation)
                     {
-                        delete(this->managedPtr)
+                        delete(this->managedPtr);
                     }
                     else
                     {

@@ -8,53 +8,41 @@ namespace cppprep::leetcode
 {
   class SolutionPalindrome {
   public:
+    class Solution {
+    public:
+      std::string longestPalindrome(std::string s) {
+        if (s.length() <= 1) return s;
 
-    std::string oddCase(int pivot, std::string s )
-    {
-      std::string palindrome{""};
-      int left{pivot-1}, right{pivot+1};
-      while(left>=0 && right < s.length())
-      {
-        if (s[left] != s[right])
-        {
-          break;
+        int start = 0;
+        int maxLen = 1; // Any single character is a palindrome of length 1
+
+        for (int i = 0; i < s.length(); i++) {
+          // Case 1: Odd length palindromes (e.g., "aba", center is s[i])
+          expandAroundCenter(s, i, i, start, maxLen);
+
+          // Case 2: Even length palindromes (e.g., "abba", center is between s[i] and s[i+1])
+          expandAroundCenter(s, i, i + 1, start, maxLen);
         }
-        palindrome = s.substr(left, (right-left)+1);
-        left--; right++;
-      }
-      return palindrome;
-    }
 
-    std::string evenCase(int pivot, std::string s )
-    {
-      std::string palindrome{""};
-      int left{pivot}, right{pivot+1};
-      while(left >=0 && right < s.length())
-      {
-        if (s[left] != s[right])
-        {
-          break;
+        return s.substr(start, maxLen);
+      }
+
+    private:
+      void expandAroundCenter(const std::string& s, int left, int right, int& start, int& maxLen) {
+        // Expand outwards as long as characters match and boundaries are valid
+        while (left >= 0 && right < s.length() && s[left] == s[right]) {
+          int currentLen = right - left + 1;
+          if (currentLen > maxLen) {
+            maxLen = currentLen;
+            start = left;
+          }
+          left--;
+          right++;
         }
-        palindrome = s.substr(left, right-left+1);
-        left--; right++;
-
       }
-      return palindrome;
-    }
+    };
 
-    std::string longestPalindrome(std::string s) {
-      std::string palindrome{""};
-      for (int i{0}; i< s.length(); i++)
-      {
-        std::string oddString{oddCase(i, s)};
 
-        std::string evenString{evenCase(i, s)};
-
-        std::string maxString = (oddString.length()>evenString.length())? oddString : evenString;
-        palindrome = (maxString.length() > palindrome.length())? maxString : palindrome;
-      }
-      return palindrome;
-    }
   };
 
 

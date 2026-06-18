@@ -1,4 +1,10 @@
 #include <iostream>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <cstring>
+#include <cstdlib>
+#include <iostream>
 #include <algorithm>
 #include <vector>
 #include <cmath>
@@ -6,57 +12,392 @@
 #include "leetcode/medianoftwosortedarrays.h"
 #include <vector>
 #include <set>
-
-#include "leetcode/dfs/numberofislands.h"
-#include "smartpointers/smartpointer.h"
-
-using namespace std;
-
-
-#include <vector>
+#include <utility>
+#include <expected>
+#include <sstream>
 #include <deque>
+#include <iterator>
+#include <queue>
+#include <chrono>
+
+#include "realworldproblems/OrderBook.h"
+#include "leetcode/lrucache.h"
+#include "leetcode/dfs/numberofislands.h"
+#include "leetcode/slidingwindow/maxslidingwindow.h"
+#include "smartpointers/smartpointer.h"
+#include "realworldproblems/vector_impl.h"
+#include "realworldproblems/vector_with_allocator.h"
+
+
 using namespace std;
 
-class MaxSlidingWindowSolution {
-public:
-  vector<int> maxSlidingWindow(vector<int>& nums, int k) {
-    vector<int> result;
-    deque<int> dq;        // Stores indices in decreasing order of values
+using Price    = int64_t;
+using Quantity = int64_t;
+using OrderId  = uint64_t;
 
-    for (int i = 0; i < nums.size(); ++i) {
 
-      // Step 1: Remove elements out of current window
-      if (!dq.empty() && dq.front() == i - k) {
-        dq.pop_front();
+struct Order {
+  OrderId   id;
+  bool      isBuy;
+  Price     price;
+  Quantity  qty;
+
+  friend std::ostream& operator << (std::ostream& os, const Order& order);
+};
+
+std::ostream& operator << (std::ostream& os, const Order& order) {
+  os << "Order { id : " << order.id
+     << ", isBuy : " << order.isBuy
+     << ", price : " << order.price
+     << ", qty : " << order.qty
+     << "}" << std::endl;
+
+  return os;
+}
+
+using OrderList = std::list<Order>;
+using OrderPtr       = OrderList::iterator;
+
+struct LadderStep
+{
+  Price             price{0};
+  Quantity          totalQty{0};
+  OrderList         orders{};
+
+  std::optional<OrderPtr> getOrder(OrderId orderId)
+  {
+    return std::ranges::find_if(orders, [&orderId](Order& ord) {
+      return ord.id == orderId;
+    });
+  }
+  friend std::ostream& operator << (std::ostream& os, const LadderStep& step);
+};
+
+std::ostream& operator << (std::ostream& os, const LadderStep& step) {
+  os << "Step : " << step.price << ", TotalQty : " << step.totalQty << std::endl;
+  std::copy(step.orders.begin(), step.orders.end(),
+           std::ostream_iterator<Order>(std::cout));
+  std::cout << "\b\b" << std::endl;
+
+  return os;
+}
+
+class OrderBook
+{
+  public:
+    using PricingLadder  = std::map<Price, LadderStep>;
+    using LadderStepPtr  = PricingLadder::iterator;
+    using OrderIdMap     = std::unordered_map<OrderId, std::pair<LadderStepPtr, OrderPtr>>;
+
+    void insert(const Order& order) {
+      return (order.isBuy) ? insert(order, _priceLadderBids, _orderIdMapBids):
+                             insert(order, _priceLadderAsks, _orderIdMapAsks);
+    }
+
+    void modify(const Order& order) {
+
+      return (order.isBuy) ? modify(order, _priceLadderBids, _orderIdMapBids):
+                             modify(order, _priceLadderAsks, _orderIdMapAsks);
+    }
+
+    void cancel(const Order& order) {
+
+      return (order.isBuy) ? cancel(order, _priceLadderBids, _orderIdMapBids):
+                             cancel(order, _priceLadderAsks, _orderIdMapAsks);
+    }
+
+    friend std::ostream& operator<<(std::ostream& os, const OrderBook& orderBook);
+
+  private:
+
+    static std::pair<LadderStepPtr, OrderPtr> insertOrUpdatePricingLadder(const Order& order,
+                                                                          PricingLadder& pricingLadder) {
+      auto [ldrStepPtr, inserted] = pricingLadder.try_emplace(order.price,
+                                                                          LadderStep {order.price,
+                                                                                      order.qty,
+                                                                                OrderList{order}});
+      if (!inserted)
+      {
+        ldrStepPtr->second.orders.emplace_back(order);
+        ldrStepPtr->second.price = order.price;
+        ldrStepPtr->second.totalQty += order.qty;
+      }
+      return std::make_pair(ldrStepPtr, std::prev(ldrStepPtr->second.orders.end()));
+    }
+
+    void insert(const Order& order, PricingLadder& pricingLadder, OrderIdMap& orderIdMap)
+    {
+      std::cout << "Inside OrderBook::insert" << std::endl;
+
+      auto ret{ insertOrUpdatePricingLadder(order, pricingLadder)};
+      orderIdMap.insert_or_assign(order.id, ret);
+    }
+
+    std::pair<LadderStepPtr, OrderPtr> updatePricingLadder(OrderPtr orderPtr, LadderStepPtr ladderStepPtr,
+                                                           PricingLadder& pricingLadder)
+    {
+      auto [newLadderStep, inserted] = pricingLadder.try_emplace(orderPtr->price,
+                                                                 LadderStep(orderPtr->price, 0,{}));
+      newLadderStep->second.orders.splice(newLadderStep->second.orders.end(),
+                                       ladderStepPtr->second.orders,
+                                       orderPtr);
+      newLadderStep->second.totalQty += orderPtr->qty;
+
+      return std::make_pair(newLadderStep, std::prev(newLadderStep->second.orders.end()));
+    }
+
+    static std::optional<LadderStepPtr> extractStepFromPricingLadder(const Order& order, PricingLadder& pricingLadder)
+    {
+      auto ldrStepPtr{pricingLadder.find(order.price)};
+      if (ldrStepPtr == pricingLadder.end())
+      {
+        return std::nullopt;
+      }
+      return  ldrStepPtr;
+    }
+
+
+    void modify(const Order& modOrder, PricingLadder& pricingLadder, OrderIdMap& orderIdMap)
+    {
+      std::cout << "Inside OrderBook::modify" << std::endl;
+      const auto orderIdMapItem{orderIdMap.find(modOrder.id)}; // Look for the order in the OrderId map
+      if (orderIdMapItem == orderIdMap.end()) {
+        std::cout << "Order not found" << std::endl;
+        return;
       }
 
-      // Step 2: Remove smaller elements from back (they can't be max anymore)
-      while (!dq.empty() && nums[dq.back()] < nums[i]) {
-        dq.pop_back();
+      auto [oldLadderIt, orderPtr] = orderIdMapItem->second;
+      bool priceChanged{ orderPtr->price != modOrder.price };
+      bool qtyChanged{ orderPtr->qty != modOrder.qty };
+
+      if (!priceChanged && !qtyChanged)
+      {
+        return;
       }
 
-      // Step 3: Add current index
-      dq.push_back(i);
+      if (priceChanged) // OrderPrice has changed. Move to appropriate PriceLevel map
+      {
+        // Remove old quantity from old price level
+        oldLadderIt->second.totalQty -= orderPtr->qty;
 
-      // Step 4: Add maximum to result when window is full
-      if (i >= k - 1) {
-        result.push_back(nums[dq.front()]);
+        // Update the OrderPtr with the new price
+        orderPtr->price = modOrder.price;
+
+
+        orderIdMapItem->second = {updatePricingLadder(orderPtr, oldLadderIt, pricingLadder)};
+      }
+
+      if (qtyChanged)
+      {
+        auto currLadderStep{orderIdMapItem->second.first};
+
+        currLadderStep->second.totalQty  -= orderPtr->qty;
+        currLadderStep->second.totalQty += modOrder.qty;
+
+        orderPtr->qty = modOrder.qty;
+      }
+
+      if (oldLadderIt->second.orders.empty())
+      {
+        pricingLadder.erase(oldLadderIt);
+      }
+
+    }
+
+    void cancel(const Order& cancelOrder, PricingLadder& pricingLadder, OrderIdMap& orderIdMap)
+    {
+      const auto orderIdMapIt{orderIdMap.find(cancelOrder.id)}; // Look for the order in the OrderId map
+      if (orderIdMapIt == orderIdMap.end()) {
+        std::cout << "Order not found" << std::endl;
+        return;
+      }
+
+      auto [ladderStepIt, orderIt] = orderIdMapIt->second;
+      ladderStepIt->second.totalQty -= orderIt->qty;
+      ladderStepIt->second.orders.erase (orderIt);
+
+      orderIdMap.erase(orderIdMapIt);
+
+      if (ladderStepIt->second.orders.empty())
+      {
+        pricingLadder.erase(ladderStepIt);
       }
     }
 
-    return result;
-  }
+    PricingLadder _priceLadderBids{};
+    PricingLadder _priceLadderAsks{};
+
+    OrderIdMap _orderIdMapBids{};
+    OrderIdMap _orderIdMapAsks{};
 };
+
+
+std::ostream& operator<<(std::ostream& os, const OrderBook& orderBook)
+{
+  os << "Price ladder Bids"
+     << "=================" << std::endl;
+  for (auto& [key, val] : orderBook._priceLadderBids)
+  {
+    os << val << std::endl;
+  }
+
+  os << "Price ladder asks"
+     << "=================" << std::endl;
+  for (auto& [key, val] : orderBook._priceLadderAsks)
+  {
+    os << val << std::endl;
+  }
+
+  return os;
+}
+
+
+struct Message
+{
+  double d;
+  int i;
+};
+
+struct foo
+{
+  int i{};
+  double d{};
+}_foo;
+
+class Base
+{
+  public:
+    void display(this auto&& self, foo& f) {
+      self.displayImpl();
+    }
+
+};
+
+class Derived : public Base
+{
+  public:
+    void displayImpl() {
+      std::cout << "Inside displayImpl" << std::endl;
+    }
+};
+
+
 
 int main() {
 
-  {
-    cppprep::smartpointers::SharedPtrTest sol;
-    sol.run_test();
-  }
-
+  Derived dr;
+  dr.display(_foo);
   return 0;
 }
+
+
+// int main() {
+//
+//   {
+//     cppprep::leetcode::MaxSlidingWindowSolutionTest mt;
+//     mt.run_test();
+//
+//   }
+//
+//   {
+//     cppprep::realworldproblems::cache_aligned_allocator<Message> alloc;
+//
+//     Message* mPtr = alloc.allocate(sizeof(Message));
+//   }
+//
+//   {
+//     cppprep::realworldproblems::vector_with_allocator_test vt;
+//     vt.run_test();
+//   }
+//
+//   {
+//     cppprep::realworldproblems::VectorTest vt;
+//     vt.run_test();
+//   }
+//
+//
+//   {
+//     cppprep::realworldproblems::OrderBookHFT_Test test{};
+//     test.run_test();
+//   }
+//
+//   {
+//     OrderBook ob;
+//
+//     // std::expected<int, int> e = std::unexpected(42);
+//     // std::cout << "std::expected works!\n";
+//
+//     std::vector<Order> orders{
+//       { 111, true, 222, 333},
+//       { 112, true, 223, 334},
+//       { 113, false, 224, 335},
+//       { 114, true, 225, 336},
+//       { 115, false, 226, 337},
+//     };
+//
+//
+//     for (auto& order  : orders)
+//     {
+//       ob.insert(order);
+//     }
+//
+//     std::cout << ob << std::endl;
+//
+//     // Modification test
+//     {
+//       Order modOrder1{orders[4]};
+//       modOrder1.price = 22600;
+//       modOrder1.qty = 3377;
+//
+//       ob.modify(modOrder1);
+//       std::cout << ob << std::endl;
+//     }
+//
+//     {
+//       Order insertOrder{};
+//       insertOrder.id = 22600;
+//       insertOrder.price = 22600;
+//       insertOrder.qty = 2000;
+//       insertOrder.isBuy = false;
+//
+//       ob.insert(insertOrder);
+//       std::cout << ob << std::endl;
+//     }
+//
+//        Order cancOrder1{115,false};
+//     ob.cancel(cancOrder1);
+//     std::cout << ob << std::endl;
+//   }
+//
+//
+//   return 0;
+// }
+
+
+
+// int main() {
+//   Solution sol;
+//   {
+//     string s1{"babad"};
+//     sol.longestPalindrome(s1);
+//
+//     string s2{"cbbd"};
+//     sol.longestPalindrome(s2);
+//   }
+//
+//
+//   {
+//     LRUCacheSolutionTest test;
+//     test.run_test();
+//   }
+//
+//   {
+//     cppprep::smartpointers::SharedPtrTest sol;
+//     sol.run_test();
+//   }
+//
+//   return 0;
+// }
 
 
 // #include <iostream>

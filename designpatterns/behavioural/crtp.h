@@ -7,27 +7,27 @@ namespace designpatterns::behavioural
   template<typename D>
   class ExecutionStrategy
   {
-  public:
-    ExecutionStrategy() {
+    public:
+      ExecutionStrategy() {
 
-    }
+      }
 
-    void display()
-    {
-      D& strategy{static_cast<D&>(*this)};
-      strategy.displayImpl();
-    }
+      void display()
+      {
+        D& strategy{static_cast<D&>(*this)};
+        strategy.displayImpl();
+      }
   };
 
   class AlgorithmicStrategy : public ExecutionStrategy<AlgorithmicStrategy>
   {
-  public:
-    AlgorithmicStrategy() :  ExecutionStrategy<AlgorithmicStrategy>() {
-    }
-    void displayImpl()
-    {
-      std::cout << "Inside AlgorithmicStrategy::displayImpl" << std::endl;
-    }
+    public:
+      AlgorithmicStrategy() :  ExecutionStrategy<AlgorithmicStrategy>() {
+      }
+      void displayImpl()
+      {
+        std::cout << "Inside AlgorithmicStrategy::displayImpl" << std::endl;
+      }
   };
 
 

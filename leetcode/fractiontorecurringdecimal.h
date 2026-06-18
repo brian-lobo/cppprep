@@ -17,7 +17,7 @@ namespace cppprep::leetcode
       if (negative) result += "-";
 
       // Make both positive
-      numerator = abs(numerator);
+      numerator = std::abs(numerator);
       denominator = std::abs(denominator);
 
       // Integer part
