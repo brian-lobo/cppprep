@@ -19,14 +19,18 @@
 #include <iterator>
 #include <queue>
 #include <chrono>
+#include <mdspan>
+#include <print>
 
 #include "realworldproblems/OrderBook.h"
 #include "leetcode/lrucache.h"
 #include "leetcode/dfs/numberofislands.h"
 #include "leetcode/slidingwindow/maxslidingwindow.h"
+#include "realworldproblems/OrderBookWithMDSpan.h"
 #include "smartpointers/smartpointer.h"
 #include "realworldproblems/vector_impl.h"
 #include "realworldproblems/vector_with_allocator.h"
+#include "synchronization/cpu_pinning.h"
 
 
 using namespace std;
@@ -285,8 +289,47 @@ class Derived : public Base
 
 int main() {
 
+  std::string name{"Alice"};
+  std::println(std::cout, "Hello, {}!\n", name);
+
+  {
+    cppprep::synchronization::CpuPinning cpuPinning;
+    cpuPinning.run_test();
+  }
+
+   {
+     std::vector<double> data(2 * 5);
+     auto book =
+       std::mdspan<double, std::extents<size_t, 2, 5>>(data.data(), 2, 5);
+
+
+     book[0, 0] = 100.05;
+     book[0, 1] = 100.04;
+     book[0, 2] = 100.03;
+     book[0, 3] = 100.02;
+     book[0, 4] = 100.01;
+
+     book[1, 0] = 90.05;
+     book[1, 1] = 90.04;
+     book[1, 2] = 90.03;
+     book[1, 3] = 90.02;
+     book[1, 4] = 90.01;
+
+     std::cout << "Best Bid : " << book[0,0] << std::endl;
+     std::cout << "Best Ask : " << book[1,4] << std::endl;
+
+   }
+
+
+  {
+    cppprep::realworldproblems::OrderBookWithMdSpanTest ob;
+    ob.run_test();
+  }
+
   Derived dr;
   dr.display(_foo);
+
+
   return 0;
 }
 

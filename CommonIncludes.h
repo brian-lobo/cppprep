@@ -21,3 +21,7 @@
 #include "designpatterns/structural/decorator.h"
 
 #include "smartpointers/smartpointer.h"
+
+#include "smartpointers/OrderBookWithMDSpan.h"
+
+#include "synchronization/cpu_pinning.h"

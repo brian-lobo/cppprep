@@ -4,8 +4,6 @@ project(cppprep)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE INTERNAL "")
 
-
-
 add_executable(cppprep main.cpp
         cppfeatures/structuredbinding.h
         CommonIncludes.h
@@ -52,7 +50,10 @@ add_executable(cppprep main.cpp
         realworldproblems/OrderBook.cpp
         realworldproblems/vector_impl.h
         realworldproblems/vector_with_allocator.h
-        realworldproblems/allocator.h)
+        realworldproblems/allocator.h
+        realworldproblems/OrderBookWithMDSpan.h
+        cppfeatures/layout_stride.h
+        synchronization/cpu_pinning.h)
 
 target_compile_options(cppprep PRIVATE -O0 -g)
 
